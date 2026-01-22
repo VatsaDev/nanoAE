@@ -1,0 +1,54 @@
+# basic AE, image in/out, compression
+
+import os
+import numpy as np
+from PIL import Image
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+class Auto_Encoder(nn.Module):
+
+    def __init__(self, input_size, latent_size):
+        super(Auto_Encoder, self).__init__()
+        
+        nc = 256
+        nc4 = int(nc / 4)
+        
+        self.input_size = input_size
+        self.latent_size = latent_size
+
+        # Encoder
+        self.enc = nn.Sequential(
+            nn.Conv2d(3, nc, kernel_size=3, stride=1, padding=1), 
+            nn.BatchNorm2d(nc),
+            nn.SiLU(inplace=True),
+            nn.AdaptiveAvgPool2d((latent_size, latent_size)),
+            nn.Conv2d(nc, nc4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(nc4),
+            nn.SiLU(inplace=True),
+            nn.Conv2d(nc4, 3, kernel_size=3, stride=1, padding=1),
+            nn.SiLU(inplace=True),
+        )
+
+        # Decoder
+        self.dec = nn.Sequential(
+            nn.Conv2d(3, nc4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(nc4),
+            nn.SiLU(inplace=True),
+            nn.Conv2d(nc4, nc, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(nc),
+            nn.SiLU(inplace=True),
+            nn.Upsample(size=(input_size, input_size), mode='bilinear', align_corners=True),
+            nn.Conv2d(nc, 3, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x): # output image and latent
+        
+        encoded = self.enc(x)
+        decoded = self.dec(encoded)
+
+        return encoded, decoded
