@@ -11,19 +11,20 @@ import torch.optim as optim
 
 class MLP(nn.Module):
 
-    def __init__(self, in_f, out_f):
+    def __init__(self, in_f):
+        super().__init__()
 
-        self.in = nn.Linear(in_f, 4*in_f)
+        self.into = nn.Linear(in_f, 4*in_f)
         self.silu = nn.SiLU(inplace=True)
-        self.out = nn.Linear(4*in_f, out_f)
+        self.out = nn.Linear(4*in_f, in_f)
 
     def forward(self, x):
 
         B, C, H, W = x.shape
 
-        x = x.view(B, C*H*W)
+        x = x.view(B, H, W, C)
         
-        x = self.in(x)
+        x = self.into(x) # channel wise
         x = self.silu(x)
         x = self.out(x)
 
@@ -45,7 +46,7 @@ class Auto_Encoder(nn.Module):
         self.enc = nn.Sequential(
             nn.Conv2d(3, nc, kernel_size=3, stride=1, padding=1), 
             nn.GroupNorm(1, nc),
-            MLP(nc, nc)            
+            MLP(nc),            
             nn.SiLU(inplace=True),
             
             nn.AdaptiveAvgPool2d((latent_size, latent_size)),
@@ -53,7 +54,7 @@ class Auto_Encoder(nn.Module):
             nn.Conv2d(nc, nc//4, kernel_size=3, stride=1, padding=1),
             nn.GroupNorm(1, nc//4),
             nn.SiLU(inplace=True),
-            MLP(nc//4, nc//4)
+            MLP(nc//4),
             
             nn.Conv2d(nc//4, 3, kernel_size=3, stride=1, padding=1),
             nn.SiLU(inplace=True),
@@ -64,12 +65,12 @@ class Auto_Encoder(nn.Module):
             nn.Conv2d(3, nc//4, kernel_size=3, stride=1, padding=1),
             nn.GroupNorm(1, nc//4),
             nn.SiLU(inplace=True),
-            MLP(nc//4, nc//4)
+            MLP(nc//4),
             
             nn.Conv2d(nc//4, nc, kernel_size=3, stride=1, padding=1),
             nn.GroupNorm(1, nc),
             nn.SiLU(inplace=True),
-            MLP(nc, nc)
+            MLP(nc),
             
             nn.Upsample(size=(input_size, input_size), mode='bilinear', align_corners=True),
             nn.Conv2d(nc, 3, kernel_size=3, stride=1, padding=1),
