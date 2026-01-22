@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -72,7 +73,10 @@ zfp_path = "compressed_latent.zfp"
 with open(zfp_path, "wb") as f: 
     f.write(compressed_data)
 
-zip_p = "C:/Program Files/7-Zip/7z.exe"
+if sys.platform.startswith('win'):
+  zip_p = "C:/Program Files/7-Zip/7z.exe"
+else:
+  zip_p = "7z"
 
 # lossless 7z stage
 seven_zip_path = "compressed_latents.zfp.7z"
@@ -115,4 +119,5 @@ axs[1].imshow(reconstructed_image)
 axs[1].set_title(f"Reconstructed Image ({seven_zip_size_kb:.2f} KB | {final_ratio:.2f}x Compression)"); axs[1].axis("off")
 
 plt.tight_layout()
+plt.savefig("comp.png")
 plt.show()
