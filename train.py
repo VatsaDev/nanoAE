@@ -21,8 +21,8 @@ class Config:
     
     patch_size = 64
     latent_size = 16
-    batch_size = 20
-    learning_rate = 1e-3
+    batch_size = 100
+    learning_rate = 3e-3
     data_dir = "data/fin_min"
     epochs = 100
     save_path = "checkpoints/AE.pth"
@@ -60,9 +60,10 @@ train_loader = DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True)
 
 # setups 
 
-model = Auto_Encoder(cfg.patch_size, cfg.latent_size)
+model = Auto_Encoder(cfg.patch_size, cfg.latent_size).to(device)
 
-recon_loss_fn = nn.L1Loss()
+mse_loss = nn.MSELoss()
+mae_loss = nn.L1Loss()
 # ssim = StructuralSimilarityIndexMeasure(data_range=2.0).to(device) # replace package
 
 optimizer = optim.AdamW(model.parameters(), lr=cfg.learning_rate)
@@ -71,7 +72,7 @@ def train():
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    print("total params:", total_params)
+    print(f"{total_params/1e6}M params")
     print(f"\ntraining for {cfg.epochs} epochs")
 
     for epoch in range(cfg.epochs):
@@ -90,12 +91,13 @@ def train():
             _, output = model(lab_images) # latent/output
 
             # losses        
-        
-            recon_loss = recon_loss_fn(output, lab_images)
+
+            mse = mse_loss(output, lab_images)
+            mae = mae_loss(output, lab_images)
             #ssim_loss = 1 - ssim(output[:, :1, :, :], lab_images[:, :1, :, :])
             #loss = (0.5 * recon_loss + 0.5 * ssim_loss)
         
-            loss = recon_loss
+            loss = (0.2*mae + 0.8*mse)
     
             loss.backward()
         
@@ -105,7 +107,8 @@ def train():
 
             progress_bar.set_postfix({
                 'Total': f"{loss.item():.4f}",
-                'Recon': f"{recon_loss.item():.4f}",
+                'MSE'  : f"{mse.item():.4f}",
+                'MAE': f"{mae.item():.4f}",
                 #'SSIM': f"{ssim_loss.item():.4f}"
             })
 
